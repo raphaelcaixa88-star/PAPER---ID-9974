@@ -10,13 +10,16 @@
 
 ## 📁 Included Scripts
 
+**Script Name | Figure | Description**
+
+Signal-DomainTime-Graphic.m | Figura 2A | (A) A segment of 2 s in the time domain in the anesthetized and awake states.
+Signal-DomainFrequency-Graphic.m | Figura 2B e 2C | Power spectral estimation using the FFT algorithm with LF and HF bands. (B) Anesthetized and (C) awake states are represented.
+
 
 ## 💻 Requirements
 
 - MATLAB R2018b or later.
 - No additional toolboxes are required.
-
----
 
 ## ✉️ Contact
 
