@@ -1,72 +1,55 @@
-clear all;
-close all;
+clear; 
+close all; 
 clc;
 
-%Caracterização do sinal
-y1=load('.txt');
-fs = 500; % find the sampling rate or frequency
-T = 1/fs;% sampling rate or frequency
-% find the length of the data per second
-N = length(y1);
-ls = size(y1);
-t = (0 : N-1)/fs;% sampling period
+%% Load ECG signals
+y_anesth = load('Anesthetized.txt'); %Load signal from anesthetized rat
+y_awake  = load('Awake.txt'); %Load signal from awake rat
 
-%Caracterização do sinal
-y2=load('.txt');
-fs2 = 500; % find the sampling rate or frequency
-T2 = 1/fs2;% sampling rate or frequency
-% find the length of the data per second
-N2 = length(y2);
-ls2 = size(y2);
-t2 = (0 : N2-1)/fs2;% sampling period
+fs = 500;                 % Sampling frequency (Hz)
+t1 = (0:length(y_anesth)-1)/fs;
+t2 = (0:length(y_awake)-1)/fs;
 
-%%%%%%%% FILTROS PASSA BAIXA E PASSA ALTA
+%% Band-pass filtering (QRS-focused)
+[b_lp,a_lp] = butter(4,35/(fs/2),'low');
+[b_hp,a_hp] = butter(4,18/(fs/2),'high');
 
-[bl,al]=butter(4,35.0/250);
-y11=filtfilt(bl,al,y1);%low-pass
-[bh,ah]=butter(4,18/250,'high');
-y12=filtfilt(bh,ah,y11);%high-pass
+yA = filtfilt(b_hp,a_hp,filtfilt(b_lp,a_lp,y_anesth));
+yW = filtfilt(b_hp,a_hp,filtfilt(b_lp,a_lp,y_awake));
 
-[bl2,al2]=butter(4,40.0/250);
-y112=filtfilt(bl2,al2,y2);%low-pass
-[bh2,ah2]=butter(4,18.0/250,'high');
-y122=filtfilt(bh2,ah2,y112);%high-pass
+%% 60 Hz notch filter
+notch = designfilt('bandstopiir','FilterOrder',2, ...
+                   'HalfPowerFrequency1',58, ...
+                   'HalfPowerFrequency2',61, ...
+                   'DesignMethod','butter', ...
+                   'SampleRate',fs);
 
+yA = filtfilt(notch,yA);
+yW = filtfilt(notch,yW);
 
-%%%%%%%% FILTRO NOT///CH 60HZ
+%% Baseline wander removal (polynomial detrending)
+[pA,~,muA] = polyfit((1:numel(yA))',yA,6);
+baselineA  = polyval(pA,(1:numel(yA))',[],muA);
+ECG_A      = yA - baselineA;
 
-d = designfilt('bandstopiir','FilterOrder',2, ...
-               'HalfPowerFrequency1',58,'HalfPowerFrequency2',61, ...
-               'DesignMethod','butter','SampleRate',fs);
-           buttLoop =filtfilt(d,y12);
-           
-           j = designfilt('bandstopiir','FilterOrder',4, ...
-               'HalfPowerFrequency1',58,'HalfPowerFrequency2',61, ...
-               'DesignMethod','butter','SampleRate',fs2);
-           buttLoop2 =filtfilt(j,y122);
-                      
-%%%%%%%% LINHA DE BASE DO SINAL           
+[pW,~,muW] = polyfit((1:numel(yW))',yW,6);
+baselineW  = polyval(pW,(1:numel(yW))',[],muW);
+ECG_W      = yW - baselineW;
 
-[p,s,mu] = polyfit((1:numel(buttLoop))',buttLoop,6);
-f_y = polyval(p,(1:numel(buttLoop))',[],mu);
-
-ECG_data = buttLoop - f_y;        % Detrend data
-
-
-[p2,s2,mu2] = polyfit((1:numel(buttLoop2))',buttLoop2,6);
-f_y2 = polyval(p2,(1:numel(buttLoop2))',[],mu2);
-
-ECG_data2 = buttLoop2 - f_y2;        % Detrend data
-
-   
+%% Visualization
+figure
 subplot(2,1,1)
-plot(t,ECG_data)% grid
-legend('')
-axis([]);
+plot(t1,ECG_A)
+title('Anesthetized')
+axis([]); % Establish two equal times for both images.
 
+subplot(2,1,2)
+plot(t2,ECG_W)
+title('Awake')
+axis([]); % Establish two equal times for both images.
 
 
 subplot(2,1,2)
 plot(t,y1)% grid
-legend('')
-axis([]);
+legend('Awake')
+axis([]); % Establish two equal times for both images.
